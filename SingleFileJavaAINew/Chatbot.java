@@ -3,6 +3,9 @@ import java.sql.*;
 import java.util.*;
 import java.util.stream.*;
 import org.apache.commons.math3.linear.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 
 public class Chatbot {
     private static final String DB_NAME = "chatbot.db";
@@ -121,7 +124,12 @@ public class Chatbot {
             }
         }
 
-        return bestScore > 0.4 ? bestAnswer : "I don't know how to respond to that. Try training me.";
+if (bestScore > 0.4) {
+    return bestAnswer;  // from database
+} else {
+    return fetchFromWeb(input); // from internet
+}
+   
     }
 
     private static Map<String, Integer> buildVocab(List<String> texts) {
@@ -154,4 +162,30 @@ public class Chatbot {
         double norm2 = v2.getNorm();
         return (norm1 == 0 || norm2 == 0) ? 0.0 : dot / (norm1 * norm2);
     }
+private static String fetchFromWeb(String query) {
+    try {
+        String urlStr = "https://api.duckduckgo.com/?q=" +
+                URLEncoder.encode(query, "UTF-8") +
+                "&format=json";
+
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        BufferedReader in = new BufferedReader(
+                new InputStreamReader(conn.getInputStream())
+        );
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = in.readLine()) != null) {
+            response.append(line);
+        }
+        in.close();
+
+        return response.toString(); // raw JSON for now
+    } catch (Exception e) {
+        return "Sorry, I couldn’t fetch info from the internet.";
+    }
+}
+
 }
